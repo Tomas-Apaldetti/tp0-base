@@ -33,3 +33,13 @@ docker-compose-down:
 docker-compose-logs:
 	docker compose -f docker-compose-dev.yaml logs -f
 .PHONY: docker-compose-logs
+
+test-up:
+	docker compose -f docker-compose-test.yaml up -d --build
+	docker compose -f docker-compose-test.yaml logs -f
+.PHONY: test-up
+
+test-down:
+	docker compose -f docker-compose-test.yaml stop -t 1
+	docker compose -f docker-compose-test.yaml down
+.PHONY: test-down
