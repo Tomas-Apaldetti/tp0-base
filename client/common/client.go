@@ -2,6 +2,7 @@ package common
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"net"
 	"time"
@@ -50,8 +51,33 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+func readResponse(ctx context.Context, reader *bufio.Reader) (string, error) {
+	responseChan := make(chan string)
+	errorChan := make(chan error)
+
+	// Start a goroutine to handle the blocking read operation
+	go func() {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			errorChan <- err
+			return
+		}
+		responseChan <- line
+	}()
+	// Use select to wait for either the response or the context cancellation
+	select {
+	case res := <-responseChan:
+		return res, nil
+	case err := <-errorChan:
+		return "", err
+	case <-ctx.Done():
+		// Context was canceled
+		return "", ctx.Err()
+	}
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
-func (c *Client) StartClientLoop() {
+func (c *Client) StartClientLoop(ctx context.Context) {
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
@@ -65,10 +91,13 @@ func (c *Client) StartClientLoop() {
 			c.config.ID,
 			msgID,
 		)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
-		c.conn.Close()
 
-		if err != nil {
+		msg, err := readResponse(ctx, bufio.NewReader(c.conn))
+		c.conn.Close()
+		if err != nil && err == context.Canceled {
+			log.Infof("action: shutdown_client | result: in_progress")
+			return
+		} else if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
 				c.config.ID,
 				err,
@@ -82,7 +111,13 @@ func (c *Client) StartClientLoop() {
 		)
 
 		// Wait a time between sending one message and the next one
-		time.Sleep(c.config.LoopPeriod)
+		select {
+		case <-ctx.Done():
+			// There is no connection created here, nor anything open.
+			log.Infof("action: shutdown_client | result: in_progress")
+			return
+		case <-time.After(c.config.LoopPeriod):
+		}
 
 	}
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)

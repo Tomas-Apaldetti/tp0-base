@@ -2,9 +2,10 @@
 
 from configparser import ConfigParser
 from common.server import Server
+from common.utils import CancelToken
 import logging
 import os
-
+import signal
 
 def initialize_config():
     """ Parse env variables or config file to find program config params
@@ -33,12 +34,20 @@ def initialize_config():
 
     return config_params
 
+def shutdown_server_signal_handler_factory(cancel_token):
+    def signal_handler(signum, frame):
+        logging.info("action: shutdown_signal_received")
+        cancel_token.cancel()
+
+    return signal_handler
 
 def main():
     config_params = initialize_config()
     logging_level = config_params["logging_level"]
     port = config_params["port"]
     listen_backlog = config_params["listen_backlog"]
+
+    cancel = CancelToken()
 
     initialize_log(logging_level)
 
@@ -47,9 +56,15 @@ def main():
     logging.debug(f"action: config | result: success | port: {port} | "
                   f"listen_backlog: {listen_backlog} | logging_level: {logging_level}")
 
+    signal.signal(signal.SIGTERM, shutdown_server_signal_handler_factory(cancel))
+
     # Initialize server and start server loop
-    server = Server(port, listen_backlog)
+    server = Server(port, listen_backlog, cancel.token())
     server.run()
+
+    cancel.close()
+    logging.info("action: shutdown | result: finalized")
+
 
 def initialize_log(logging_level):
     """

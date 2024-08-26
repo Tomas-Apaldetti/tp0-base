@@ -1,6 +1,7 @@
 import csv
 import datetime
 import time
+import os
 
 
 """ Bets storage location. """
@@ -48,4 +49,21 @@ def load_bets() -> list[Bet]:
         reader = csv.reader(file, quoting=csv.QUOTE_MINIMAL)
         for row in reader:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
+
+
+class CancelToken:
+
+    def __init__(self):
+        self._read_fd, self._write_fd = os.pipe();
+
+    def token(self):
+        return self._read_fd;
+
+    def cancel(self):
+        # Write anything really, as long as it has data it works as we never read it
+        os.write(self._write_fd, b"1");
+
+    def close(self):
+        os.close(self._read_fd)
+        os.close(self._write_fd)
 

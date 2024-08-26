@@ -6,3 +6,6 @@ Correr comandos de `Makefile` correspondientes
 
 ## Ejercicio 3:
 El script `validar-echo-server.sh` levanta un container, instala netcat y luego lo utiliza para mandar el mensaje. Asume una red `tp0_testing_net` container del server llamado `server` y que este sirviendo trafico en puerto `12345`
+
+## Ejercicio 4:
+No se modifico forma de correr el proyecto.

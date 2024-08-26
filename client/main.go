@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/op/go-logging"
@@ -90,6 +93,20 @@ func PrintConfig(v *viper.Viper) {
 	)
 }
 
+func setupSignalHandler() (context.Context, context.CancelFunc) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		<-sigs
+		log.Infof("action: received_signal")
+		cancel()
+	}()
+
+	return ctx, cancel
+}
+
 func main() {
 	v, err := InitConfig()
 	if err != nil {
@@ -99,6 +116,9 @@ func main() {
 	if err := InitLogger(v.GetString("log.level")); err != nil {
 		log.Criticalf("%s", err)
 	}
+
+	ctx, cancel := setupSignalHandler()
+	defer cancel()
 
 	// Print program config with debugging purposes
 	PrintConfig(v)
@@ -111,5 +131,7 @@ func main() {
 	}
 
 	client := common.NewClient(clientConfig)
-	client.StartClientLoop()
+	client.StartClientLoop(ctx)
+
+	log.Infof("action: shutdown_client")
 }
