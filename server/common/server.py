@@ -1,6 +1,9 @@
 import socket
 import logging
 import select
+from common import serialization
+from common import business
+from common import response
 
 
 class Server:
@@ -30,26 +33,22 @@ class Server:
         
         self._server_socket.close()
 
-
     def __handle_client_connection(self, client_sock):
         """
         Read message from a specific client socket and closes the socket
 
         If a problem arises in the communication with the client, the
         client socket will also be closed
-        """
+        """            
+        addr = client_sock.getpeername()
         try:
-            addr = client_sock.getpeername()
-            if self.__should_cancel(client_sock):
-                client_sock.close()
-                return
-            # TODO: Modify the receive to avoid short-reads
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(msg).encode('utf-8'))
+            client, payload = self.__read_message(client_sock)
+            code, payload = business.handle_payload(client, payload)
+            self.__safe_write(client_sock, response.Response(code, payload).to_bytes())
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
+        except ConnectionError as c:
+            pass
         finally:
             client_sock.close()
 
@@ -83,3 +82,36 @@ class Server:
         c, addr = self._server_socket.accept()
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
         return c
+
+    def __safe_read(self, sock: socket.socket, amount: int) -> bytes:
+        read = 0
+        buf = b''
+        while read < amount:
+            if (self.__should_cancel(sock)):
+                raise ConnectionError("Socket connection closed prematurely")
+            b = sock.recv(amount - read)
+            read += len(b)
+            buf += b
+        return buf
+    
+    def __safe_write(self, sock: socket.socket, payload: bytes):
+        total = len(payload)
+        to_write = total
+        while to_write > 0:
+            written = sock.send(payload[total - to_write:])
+            if written <= 0:
+                raise ConnectionError("Socket connection closed prematurely")
+            to_write -= written
+    
+    def __read_message(self, client_sock: socket.socket) -> (str, bytes):
+        m_len = serialization.Deserializer(
+                    self.__safe_read(client_sock, 4)
+                ).get_uint32()
+
+        c = self.__safe_read(
+            client_sock, 
+            serialization.Deserializer(
+                self.__safe_read(client_sock, 4)
+            ).get_uint32()
+        )
+        return (c.decode('utf-8'), self.__safe_read(client_sock, m_len))

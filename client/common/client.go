@@ -1,9 +1,8 @@
 package common
 
 import (
-	"bufio"
 	"context"
-	"fmt"
+	"encoding/binary"
 	"net"
 	"time"
 
@@ -23,14 +22,30 @@ type ClientConfig struct {
 // Client Entity that encapsulates how
 type Client struct {
 	config ClientConfig
+	action Action
 	conn   net.Conn
+}
+
+type Message struct {
+	length   uint32
+	clientId string
+	payload  []byte
+}
+
+func (h *Message) Serialize() []byte {
+	s := NewSerializer()
+	s.WriteUint32(h.length)
+	s.WriteString(h.clientId)
+	s.WriteBytes(h.payload)
+	return s.ToBytes()
 }
 
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
-func NewClient(config ClientConfig) *Client {
+func NewClient(config ClientConfig, action Action) *Client {
 	client := &Client{
 		config: config,
+		action: action,
 	}
 	return client
 }
@@ -51,31 +66,6 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-func readResponse(ctx context.Context, reader *bufio.Reader) (string, error) {
-	responseChan := make(chan string)
-	errorChan := make(chan error)
-
-	// Start a goroutine to handle the blocking read operation
-	go func() {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			errorChan <- err
-			return
-		}
-		responseChan <- line
-	}()
-	// Use select to wait for either the response or the context cancellation
-	select {
-	case res := <-responseChan:
-		return res, nil
-	case err := <-errorChan:
-		return "", err
-	case <-ctx.Done():
-		// Context was canceled
-		return "", ctx.Err()
-	}
-}
-
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop(ctx context.Context) {
 	// There is an autoincremental msgID to identify every message sent
@@ -84,15 +74,9 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		// Create the connection the server in every loop iteration. Send an
 		c.createClientSocket()
 
-		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)
+		c.safeWrite(ctx, c.WrapPayload(c.action.Do()))
 
-		msg, err := readResponse(ctx, bufio.NewReader(c.conn))
+		_, msg, err := c.readResponse(ctx)
 		c.conn.Close()
 		if err != nil && err == context.Canceled {
 			return
@@ -118,4 +102,81 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 
 	}
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+}
+
+func (c *Client) safeWrite(ctx context.Context, data []byte) error {
+	to_write := len(data)
+	for to_write > 0 {
+		written, err := c.conn.Write(data[len(data)-to_write:])
+		if err != nil {
+			return err
+		}
+		to_write -= written
+	}
+
+	return nil
+}
+
+func (c *Client) safeRead(ctx context.Context, n int) ([]byte, error) {
+	responseChan := make(chan []byte, 1)
+	errorChan := make(chan error, 1)
+
+	go func() {
+		read := 0
+		buf := make([]byte, n)
+		for read < n {
+			a, err := c.conn.Read(buf[read:])
+			if err != nil {
+				errorChan <- err
+				return
+			}
+			read += a
+		}
+		responseChan <- buf
+	}()
+	select {
+	case res := <-responseChan:
+		return res, nil
+	case err := <-errorChan:
+		return nil, err
+	case <-ctx.Done():
+		// Context was canceled
+		return nil, ctx.Err()
+	}
+}
+
+func (c *Client) readResponse(ctx context.Context) (int, []byte, error) {
+	length, err := c.safeRead(ctx, 4)
+
+	if err != nil {
+		return 0, nil, nil
+	}
+
+	code, err := c.safeRead(ctx, 4)
+
+	if err != nil {
+		return 0, nil, nil
+	}
+
+	m, err := c.safeRead(ctx, int(int32(binary.LittleEndian.Uint32(length))))
+
+	if err != nil {
+		return 0, nil, nil
+	}
+
+	return int(int32(binary.LittleEndian.Uint32(code))), m, nil
+}
+
+func (c *Client) WrapPayload(payload []byte) []byte {
+	l := len(payload)
+	m := &(Message{
+		payload:  payload,
+		clientId: c.config.ID,
+		length:   uint32(l),
+	})
+	return m.Serialize()
+}
+
+type Action interface {
+	Do() []byte
 }

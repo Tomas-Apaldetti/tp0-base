@@ -11,6 +11,12 @@ NUM_CLIENTS=$2
 OUTPUT_FILE=$1
 
 
+NOMBRE=${NOMBRE:-"Tomas Leonel"}
+APELLIDO=${APELLIDO:-"Apaldetti"}
+DOCUMENTO=${DOCUMENTO:-"41674138"}
+NACIMIENTO=${NACIMIENTO:-"1999-02-15"}
+NUMERO=${NUMERO:-"12345"}
+
 # Start building the Docker Compose content
 cat <<EOF > "$OUTPUT_FILE"
 version: '3.8'
@@ -36,6 +42,11 @@ for i in $(seq 1 $NUM_CLIENTS); do
     entrypoint: /client
     environment:
       - CLI_ID=$i
+      - NOMBRE=$NOMBRE
+      - APELLIDO=$APELLIDO
+      - DOCUMENTO=$DOCUMENTO
+      - NACIMIENTO=$NACIMIENTO
+      - NUMERO=$NUMERO
     networks:
       - testing_net
     depends_on:
