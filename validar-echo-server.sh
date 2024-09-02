@@ -1,3 +1,6 @@
+: ${SERVER_IP:="server"}
+: ${SERVER_PORT:=12345}
+
 # Check if SERVER_IP is set
 if [ -z "$SERVER_IP" ]; then
   echo "Error: SERVER_IP environment variable is not set."
