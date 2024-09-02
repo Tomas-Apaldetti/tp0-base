@@ -8,7 +8,14 @@ fi
 
 # Read the parameters
 NUM_CLIENTS=$2
+NUM_CLIENTS=$(($NUM_CLIENTS + 0))
 OUTPUT_FILE=$1
+
+# Validate that NUM_CLIENTS is a positive integer
+if ! [[ "$NUM_CLIENTS" =~ ^[0-9]+$ ]] || [ "$NUM_CLIENTS" -le 0 ]; then
+    echo "Error: The number of clients must be a positive integer."
+    exit 1
+fi
 
 # Start building the Docker Compose content
 cat <<EOF > "$OUTPUT_FILE"
