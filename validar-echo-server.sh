@@ -1,3 +1,4 @@
+NETWORK_INSPECT=$(docker network inspect tp0_testing_net)
 : ${SERVER_IP:=$(echo "$NETWORK_INSPECT" | awk -F'"' '/"Name": "server"/ {getline; getline; getline; print $4}' | cut -d'/' -f1)}
 : ${SERVER_PORT:=12345}
 
