@@ -95,7 +95,6 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		msg, err := readResponse(ctx, bufio.NewReader(c.conn))
 		c.conn.Close()
 		if err != nil && err == context.Canceled {
-			log.Infof("action: shutdown_client | result: in_progress")
 			return
 		} else if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
@@ -113,8 +112,6 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		// Wait a time between sending one message and the next one
 		select {
 		case <-ctx.Done():
-			// There is no connection created here, nor anything open.
-			log.Infof("action: shutdown_client | result: in_progress")
 			return
 		case <-time.After(c.config.LoopPeriod):
 		}

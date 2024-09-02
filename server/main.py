@@ -36,7 +36,6 @@ def initialize_config():
 
 def shutdown_server_signal_handler_factory(cancel_token):
     def signal_handler(signum, frame):
-        logging.info("action: shutdown_signal_received")
         cancel_token.cancel()
 
     return signal_handler
@@ -63,7 +62,6 @@ def main():
     server.run()
 
     cancel.close()
-    logging.info("action: shutdown | result: finalized")
 
 
 def initialize_log(logging_level):

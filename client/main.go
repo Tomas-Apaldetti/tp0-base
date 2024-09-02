@@ -100,7 +100,6 @@ func setupSignalHandler() (context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		<-sigs
-		log.Infof("action: received_signal")
 		cancel()
 	}()
 
@@ -132,6 +131,4 @@ func main() {
 
 	client := common.NewClient(clientConfig)
 	client.StartClientLoop(ctx)
-
-	log.Infof("action: shutdown_client")
 }
