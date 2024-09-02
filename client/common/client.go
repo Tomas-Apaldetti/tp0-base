@@ -68,13 +68,20 @@ func (c *Client) createClientSocket() error {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop(ctx context.Context) {
+	defer c.action.OnClose()
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
-	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
+	for {
+
+		content, stop := c.action.Do()
+		if stop {
+			break
+		}
+
 		// Create the connection the server in every loop iteration. Send an
 		c.createClientSocket()
 
-		c.safeWrite(ctx, c.WrapPayload(c.action.Do()))
+		c.safeWrite(ctx, c.WrapPayload(content))
 
 		_, msg, err := c.readResponse(ctx)
 		c.conn.Close()
@@ -178,5 +185,6 @@ func (c *Client) WrapPayload(payload []byte) []byte {
 }
 
 type Action interface {
-	Do() []byte
+	Do() ([]byte, bool)
+	OnClose()
 }

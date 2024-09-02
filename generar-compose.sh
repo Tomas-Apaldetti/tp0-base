@@ -48,17 +48,14 @@ for i in $(seq 1 $NUM_CLIENTS); do
     entrypoint: /client
     environment:
       - CLI_ID=$i
-      - NOMBRE=$NOMBRE
-      - APELLIDO=$APELLIDO
-      - DOCUMENTO=$DOCUMENTO
-      - NACIMIENTO=$NACIMIENTO
-      - NUMERO=$NUMERO
+      - CSVPATH=/data/agency.csv
     networks:
       - testing_net
     depends_on:
       - server
     volumes:
       - ./client/config.yaml:/config.yaml
+      - ./.data/agency-$i.csv:/data/agency.csv
 EOF
 done
 

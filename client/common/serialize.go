@@ -45,3 +45,16 @@ func (s *Serializer) WriteBytes(b []byte) *Serializer {
 func (s *Serializer) ToBytes() []byte {
 	return s.buf.Bytes()
 }
+
+func (s *Serializer) WriteArray(serializables []Serializable) *Serializer {
+	l := uint32(len(serializables))
+	s.WriteUint32(l)
+	for _, ser := range serializables {
+		s.WriteBytes(ser.Serialize())
+	}
+	return s
+}
+
+type Serializable interface {
+	Serialize() []byte
+}

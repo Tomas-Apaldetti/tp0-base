@@ -28,11 +28,7 @@ func InitConfig() (*viper.Viper, error) {
 
 	// Configure viper to read env variables with the CLI_ prefix
 	v.AutomaticEnv()
-	v.BindEnv("nombre")
-	v.BindEnv("apellido")
-	v.BindEnv("documento")
-	v.BindEnv("nacimiento")
-	v.BindEnv("numero")
+	v.BindEnv("csvpath")
 
 	v.SetEnvPrefix("cli")
 	// Use a replacer to replace env variables underscores with points. This let us
@@ -46,6 +42,7 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("loop", "period")
 	v.BindEnv("loop", "amount")
 	v.BindEnv("log", "level")
+	v.BindEnv("batch", "maxAmount")
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -135,13 +132,7 @@ func main() {
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
-	betAction := common.BetAction{
-		Nombre:     v.GetString("nombre"),
-		Apellido:   v.GetString("apellido"),
-		Documento:  v.GetString("documento"),
-		Nacimiento: v.GetString("nacimiento"),
-		Numero:     int32(v.GetInt("numero")),
-	}
+	betAction, err := common.NewBetAction(v.GetString("csvpath"), v.GetInt("batch.maxAmount"))
 
 	client := common.NewClient(clientConfig, betAction)
 	client.StartClientLoop(ctx)

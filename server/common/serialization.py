@@ -22,6 +22,10 @@ class Deserializer:
         self.curr = self.curr + 4
         return struct.unpack('<i',b)[0]
 
+    def get_list(self, deserializer) -> list:
+        r = self.get_uint32()
+        return [deserializer(self) for _ in range(r)]
+
 class Serializer:
 
     def __init__(self):
