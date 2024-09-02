@@ -5,4 +5,4 @@ Se debera correr `./generar-compose.sh <output_name> <client_amount>` y luego co
 Correr comandos de `Makefile` correspondientes
 
 ## Ejercicio 3:
-Se agregaron comandos `test-up` y `test-down` al `Makefile` para correr el script de prueba.
+El script `validar-echo-server.sh` levanta un container, instala netcat y luego lo utiliza para mandar el mensaje. Asume una red `tp0_testing_net` container del server llamado `server` y que este sirviendo trafico en puerto `12345`
