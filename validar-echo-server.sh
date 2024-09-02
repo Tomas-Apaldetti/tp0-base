@@ -1,4 +1,4 @@
-: ${SERVER_IP:="server"}
+: ${SERVER_IP:=$(echo "$NETWORK_INSPECT" | awk -F'"' '/"Name": "server"/ {getline; getline; getline; print $4}' | cut -d'/' -f1)}
 : ${SERVER_PORT:=12345}
 
 # Check if SERVER_IP is set
