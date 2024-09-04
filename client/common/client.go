@@ -156,19 +156,19 @@ func (c *Client) readResponse(ctx context.Context) (int, []byte, error) {
 	length, err := c.safeRead(ctx, 4)
 
 	if err != nil {
-		return 0, nil, nil
+		return 0, nil, err
 	}
 
 	code, err := c.safeRead(ctx, 4)
 
 	if err != nil {
-		return 0, nil, nil
+		return 0, nil, err
 	}
 
 	m, err := c.safeRead(ctx, int(int32(binary.LittleEndian.Uint32(length))))
 
 	if err != nil {
-		return 0, nil, nil
+		return 0, nil, err
 	}
 
 	return int(int32(binary.LittleEndian.Uint32(code))), m, nil
