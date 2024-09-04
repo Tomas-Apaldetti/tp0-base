@@ -83,7 +83,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 
 		c.safeWrite(ctx, c.WrapPayload(content))
 
-		_, msg, err := c.readResponse(ctx)
+		code, msg, err := c.readResponse(ctx)
 		c.conn.Close()
 		if err != nil && err == context.Canceled {
 			return
@@ -94,6 +94,8 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			)
 			return
 		}
+
+		c.action.Response(code, msg)
 
 		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
 			c.config.ID,
@@ -186,5 +188,6 @@ func (c *Client) WrapPayload(payload []byte) []byte {
 
 type Action interface {
 	Do() ([]byte, bool)
+	Response(int, []byte)
 	OnClose()
 }

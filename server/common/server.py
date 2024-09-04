@@ -1,19 +1,36 @@
 import socket
 import logging
 import select
+from typing import Callable
 from common import serialization
 from common import business
 from common import response
 
+OK = 200
+ERROR = 500
 
 class Server:
-    def __init__(self, port, listen_backlog, cancel_token):
+    def __init__(self, port, expected_agencies, listen_backlog, cancel_token):
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self._server_socket.setblocking(False)
         self._cancel_token = cancel_token
+
+
+        def resolver(s: socket.socket, cb: Callable[[socket.socket, Callable[[], tuple[int, bytes]]], None]):
+            try:
+                code, payload = cb()
+                self.__safe_write(s, response.Response(code,payload).to_bytes())
+            except OSError as e:
+                logging.error(f"action: receive_message | result: fail | error: {e}")
+            except ConnectionError as c:
+                pass
+            finally:
+                s.close()
+        
+        self._resolve_bets = LongPolling(lambda x: len(x) >= expected_agencies, resolver)
 
     def run(self):
         """
@@ -41,16 +58,23 @@ class Server:
         client socket will also be closed
         """            
         addr = client_sock.getpeername()
+        waiting = False
         try:
             client, payload = self.__read_message(client_sock)
-            code, payload = business.handle_payload(client, payload)
-            self.__safe_write(client_sock, response.Response(code, payload).to_bytes())
+            a = business.handle_payload(client, payload)
+            if callable(a):
+                self._resolve_bets.add_to_wait(client_sock, a)
+                waiting = True
+            else:
+                code, payload = a
+                self.__safe_write(client_sock, response.Response(code, payload).to_bytes())
         except OSError as e:
-            logging.error("action: receive_message | result: fail | error: {e}")
+            logging.error(f"action: receive_message | result: fail | error: {e}")
         except ConnectionError as c:
             pass
         finally:
-            client_sock.close()
+            if not waiting:
+                client_sock.close()
 
     def __should_cancel(self, where):
         readable, _, _ = select.select(
@@ -115,3 +139,21 @@ class Server:
             ).get_uint32()
         )
         return (c.decode('utf-8'), self.__safe_read(client_sock, m_len))
+
+
+class LongPolling:
+
+    def __init__(self, ready: Callable[[list], bool], writer: Callable[[socket.socket, Callable[[], tuple[int, bytes]]], None]):
+        self.wait_list: list[tuple[socket.socket, Callable[[], tuple[int, bytes]]]] = []
+        self.writer = writer
+        self.ready = ready
+
+    def add_to_wait(self, s: socket.socket, cb: Callable[[], tuple[int, bytes]]):
+        self.wait_list.append((s,cb))
+        if self.ready(self.wait_list):
+            self.do()
+        
+    def do(self):
+        for s, cb in self.wait_list:
+            self.writer(s, cb)
+        self.wait_list.clear()

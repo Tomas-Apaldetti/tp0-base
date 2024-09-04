@@ -22,6 +22,11 @@ class Deserializer:
         self.curr = self.curr + 4
         return struct.unpack('<i',b)[0]
 
+    def get_uint8(self) -> int:
+        b = self.buf[self.curr: self.curr + 1]
+        self.curr += 1
+        return struct.unpack('<B', b)[0]
+
     def get_list(self, deserializer) -> list:
         r = self.get_uint32()
         return [deserializer(self) for _ in range(r)]
@@ -37,6 +42,15 @@ class Serializer:
 
     def push_int32(self, v: int):
         self.b += struct.pack('<i', v)
+        return self
+    
+    def push_uint8(self, v: int):
+        self.b += struct.pack('<B', v)
+        return self
+
+    def push_str(self, v: str):
+        self.push_uint32(len(v))
+        self.b += v.encode('utf-8')
         return self
 
     def push_bytes(self, b: bytes):

@@ -31,3 +31,14 @@ De esta manera se permite que las apuestas tengan diferente longitud y soporten 
 
 ## Ejercicio 6:
 Para soportar el envio de listas de objetos, se asumio que los objetos son siempre conocidos por el receptor, y en general, que sean todos iguales. De esta manera, con simplemente indicar la cantidad de objetos en el array antes de que los datos comiencen se puede serializar. Al igual que en todo el protocolo, el tipo de dato para indicar la longitud es `uint32 little-endian` (es un poco grande en terminos practicos, pero para ilustrar el concepto, en una implementacion real probablemente sean 1 o 2 bytes)
+
+## Ejercicio 7:
+Para soportar el envio de diferentes tipos de mensajes entre el cliente y el server se agrego un `uint8` al principio del mensaje para identificar el tipo. Se asumio que los tipos de mensajes se mantendran relativamente acotados. Para facilitar el codeo, el server le responde al cliente con la cantidad de ganadores; en un escenario mas realista le responde con los DNIs de los ganadores y el cliente buscara en sus datos quienes son estos ganadores. La lista de DNIs se puede enviar utilizando el mecanismo de serializacion de listas diseñado en el ejercicio anterior o como una unica string que use separadores, etc. Como en este caso solo nos interesa la cantidad, se ahorro ese trabajo. 
+
+### Codigo de tipos de mensajes:
+- `LOAD_BETS = 1` : Mandado por el cliente para cargar apuestas. Se espera que lo siguiente sea una lista de apuestas
+- `ASK = 2`: Mandado por el cliente para preguntar el ganador. No se espera payload
+
+- `BETS_RECEIVED = 253`: Respuesta al cargar apuestas. No se espera payload
+- `KEEP_ASKING = 255`: Respuesta a una pregunta de ganador que todavia no se puede responder. No se espera payload
+- `ANSWER = 254`: Respuesta a una de ganador. El payload envia la cantidad de ganadores en un un `uint32 little-endian`
