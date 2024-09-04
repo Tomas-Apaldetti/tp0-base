@@ -2,8 +2,8 @@ package common
 
 import (
 	"bufio"
-	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -92,7 +92,9 @@ func (b *BetAction) CanDo() bool {
 }
 
 func parseInt(s string) int {
-	var i int
-	fmt.Scan(s, &i)
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
+	}
 	return i
 }
