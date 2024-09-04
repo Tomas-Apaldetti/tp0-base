@@ -42,3 +42,5 @@ Para soportar el envio de diferentes tipos de mensajes entre el cliente y el ser
 - `BETS_RECEIVED = 253`: Respuesta al cargar apuestas. No se espera payload
 - `KEEP_ASKING = 255`: Respuesta a una pregunta de ganador que todavia no se puede responder. No se espera payload
 - `ANSWER = 254`: Respuesta a una de ganador. El payload envia la cantidad de ganadores en un un `uint32 little-endian`
+
+Para saber la cantidad de agencias esperadas se uso una variable de entorno o dentro del archivo de configuracion. En caso de usar el script de `generar-compose.sh` las agencias esperadas seran igual a la cantidad de clientes creados
