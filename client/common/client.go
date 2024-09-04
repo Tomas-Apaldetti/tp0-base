@@ -69,6 +69,9 @@ func (c *Client) createClientSocket() error {
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop(ctx context.Context) {
 	defer c.action.OnClose()
+	c.createClientSocket()
+	defer c.conn.Close()
+
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
 	for {
@@ -78,13 +81,9 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			break
 		}
 
-		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
-
 		c.safeWrite(ctx, c.WrapPayload(content))
 
 		code, msg, err := c.readResponse(ctx)
-		c.conn.Close()
 		if err != nil && err == context.Canceled {
 			return
 		} else if err != nil {
@@ -158,19 +157,19 @@ func (c *Client) readResponse(ctx context.Context) (int, []byte, error) {
 	length, err := c.safeRead(ctx, 4)
 
 	if err != nil {
-		return 0, nil, nil
+		return 0, nil, err
 	}
 
 	code, err := c.safeRead(ctx, 4)
 
 	if err != nil {
-		return 0, nil, nil
+		return 0, nil, err
 	}
 
 	m, err := c.safeRead(ctx, int(int32(binary.LittleEndian.Uint32(length))))
 
 	if err != nil {
-		return 0, nil, nil
+		return 0, nil, err
 	}
 
 	return int(int32(binary.LittleEndian.Uint32(code))), m, nil

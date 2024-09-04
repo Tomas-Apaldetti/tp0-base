@@ -42,3 +42,14 @@ Para soportar el envio de diferentes tipos de mensajes entre el cliente y el ser
 - `BETS_RECEIVED = 253`: Respuesta al cargar apuestas. No se espera payload
 - `KEEP_ASKING = 255`: Respuesta a una pregunta de ganador que todavia no se puede responder. No se espera payload
 - `ANSWER = 254`: Respuesta a una de ganador. El payload envia la cantidad de ganadores en un un `uint32 little-endian`
+
+Para saber la cantidad de agencias esperadas se uso una variable de entorno o dentro del archivo de configuracion. En caso de usar el script de `generar-compose.sh` las agencias esperadas seran igual a la cantidad de clientes creados
+
+## Ejercicio 8:
+Para el soporte de multi threading se realizaron los siguientes cambios:
+- Se utilizo una barrera para sincronizar cuando se pueden dar los resultados a las agencias. Antes se utilizaba un approach de callbacks manteniendo el socket abierto debido a que todo estaba viviendo en un unico thread.
+- Se utilizo un Mutex (`Lock` en python) para bloquear el acceso al archivo de apuesta de manera que solo un handler de la agencia pueda manejarlo por vez. Debido a que la mayoria del trabajo es escibir en el archivo, solo un `thread` puede tener acceso a la vez.
+- Se intenta unir los `threads` que estan terminados cada vez que se acepta una nueva conexion para poder limpiar la memoria del servidor a medida que llegan nuevos clientes. 
+- El cliente ahora solo crea una conexion por donde se transmiten todos los mensajes que necesita; de todas maneras este enfoque es para no inundar de creaciones de threads el servidor (pues de la anterior manera se crearia un thread por mensaje mandado), el protocolo gracias al id del cliente puede retomar en caso de que el cliente se desconecte.
+
+El protocolo de comunicacion se mantuvo igual

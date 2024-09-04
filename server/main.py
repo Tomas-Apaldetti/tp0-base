@@ -2,7 +2,8 @@
 
 from configparser import ConfigParser
 from common.server import Server
-from common.utils import CancelToken
+from common.business import ClientFactory
+from common.utils import CancelToken, SafeBetStorage
 import logging
 import os
 import signal
@@ -59,8 +60,10 @@ def main():
 
     signal.signal(signal.SIGTERM, shutdown_server_signal_handler_factory(cancel))
 
+    client_handler_factory = ClientFactory(expected_agencies, SafeBetStorage())
+
     # Initialize server and start server loop
-    server = Server(port, expected_agencies, listen_backlog, cancel.token())
+    server = Server(port, client_handler_factory, listen_backlog, cancel.token())
     server.run()
 
     cancel.close()

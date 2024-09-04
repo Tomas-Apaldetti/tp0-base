@@ -2,6 +2,7 @@ import csv
 import datetime
 import time
 import os
+import threading
 
 
 """ Bets storage location. """
@@ -49,6 +50,23 @@ def load_bets() -> list[Bet]:
         reader = csv.reader(file, quoting=csv.QUOTE_MINIMAL)
         for row in reader:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
+
+
+class SafeBetStorage:
+
+    def __init__(self):
+        self.lock = threading.Lock()
+
+    def load_bets(self) -> list[Bet]:
+        self.lock.acquire()
+        b = load_bets()
+        self.lock.release()
+        return b
+
+    def store_bets(self, bets: list[Bet]) -> None:
+        self.lock.acquire()
+        store_bets(bets)
+        self.lock.release()
 
 
 class CancelToken:
