@@ -28,3 +28,7 @@ Luego de esto, sigue el payload, abstracto a los campos de la parte de networkin
 Todos los campos de tipo `string` se serializan en encoding `utf-8` de la siguiente manera: `<largo><bytes>` donde `tamaño` se refiere al largo en bytes de la `string` en `utf-8` y es un `uint32 little-endian`.
 
 De esta manera se permite que las apuestas tengan diferente longitud y soporten variacion en sus contenido. (A costa de utilizar un tamaño fijo para su longitud, que ademas limita el tamaño maximo de un campo string)
+
+La repuesta a una peticion del cliente sera similar, con diferencia de:
+- El payload de la respuesta dependera del tipo de respuesta
+- En lugar de tener el campo de `clientId` tendra un codigo de respuesta `uint32 little-endian`. Este codigo de respuesta sera utilizado para indicar respuestas generales del protocolo (por ahora solamente existen `OK=200` y `ERROR=400`). Cualquier otra informacion del negocio deberia ser enviada dentro del `payload` de la respuesta.
