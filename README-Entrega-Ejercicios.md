@@ -29,6 +29,10 @@ Todos los campos de tipo `string` se serializan en encoding `utf-8` de la siguie
 
 De esta manera se permite que las apuestas tengan diferente longitud y soporten variacion en sus contenido. (A costa de utilizar un tamaño fijo para su longitud, que ademas limita el tamaño maximo de un campo string)
 
+La repuesta a una peticion del cliente sera similar, con diferencia de:
+- El payload de la respuesta dependera del tipo de respuesta
+- En lugar de tener el campo de `clientId` tendra un codigo de respuesta `uint32 little-endian`. Este codigo de respuesta sera utilizado para indicar respuestas generales del protocolo (por ahora solamente existen `OK=200` y `ERROR=400`). Cualquier otra informacion del negocio deberia ser enviada dentro del `payload` de la respuesta.
+
 ## Ejercicio 6:
 Para soportar el envio de listas de objetos, se asumio que los objetos son siempre conocidos por el receptor, y en general, que sean todos iguales. De esta manera, con simplemente indicar la cantidad de objetos en el array antes de que los datos comiencen se puede serializar. Al igual que en todo el protocolo, el tipo de dato para indicar la longitud es `uint32 little-endian` (es un poco grande en terminos practicos, pero para ilustrar el concepto, en una implementacion real probablemente sean 1 o 2 bytes)
 
